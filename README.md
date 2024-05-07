@@ -5,7 +5,7 @@
 This candidate application platform allows users to view job listings, filter jobs based on various criteria, and implement infinite scroll for a seamless browsing experience. The platform provides a user-friendly interface for viewing and applying to jobs.
 
 ## Video Demonstration of responsiveness
-You can watch the video demonstration [here](./public/demo.mp4).
+You can watch the video demonstration [here](https://drive.google.com/file/d/1EehNdnWi43wOTuc72jZoCesO64T8Qy-t/view).
 
 ## Technology Stack
 
