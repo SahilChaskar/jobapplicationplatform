@@ -4,6 +4,12 @@
 
 This candidate application platform allows users to view job listings, filter jobs based on various criteria, and implement infinite scroll for a seamless browsing experience. The platform provides a user-friendly interface for viewing and applying to jobs.
 
+## Video Demonstration of responsiveness
+<video width="640" height="360" controls>
+  <source src="./public/demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 ## Technology Stack
 
 - ReactJs
