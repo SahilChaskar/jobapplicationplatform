@@ -1,75 +1,85 @@
-import React, { useEffect, useState } from 'react';
-import JobCard from './JobCard';
+import React, { useEffect, useRef, useCallback } from 'react';
+import { connect } from 'react-redux';
+import JobCard from './JobCard'; 
+import { setJobListings, setPage, setLoading, setFilters } from '../redux/actions';
 
-const JobListing = () => {
-  const [jobListings, setJobListings] = useState([]);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({
-    minExperience: '',
-    companyName: '',
-    location: '',
-    remote: '',
-    techStack: '',
-    role: '',
-    minBasePay: '',
-  });
+const JobListing = ({
+  jobListings,
+  page,
+  loading,
+  filters,
+  setJobListings,
+  setPage,
+  setLoading,
+  setFilters,
+}) => {
+  const observerRef = useRef(null);
 
+  // Function to fetch jobs data from the API
+  const fetchJobs = useCallback(async () => {
+    setLoading(true); 
+    const myHeaders = new Headers();
+    myHeaders.append('Content-Type', 'application/json');
+    const body = JSON.stringify({
+      limit: 10,
+      offset: (page - 1) * 10,
+    });
+    const requestOptions = {
+      method: 'POST',
+      headers: myHeaders,
+      body,
+    };
+    try {
+      const response = await fetch(
+        'https://api.weekday.technology/adhoc/getSampleJdJSON',
+        requestOptions
+      );
+      const data = await response.json(); 
+      // console.log(data); 
+      if (data && data.jdList && data.jdList.length > 0) {
+        setJobListings([...jobListings, ...data.jdList]);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching jobs:', error); 
+      setLoading(false);
+    }
+  }, [page, jobListings, setJobListings, setLoading]);
+
+  // useEffect hook to observe element intersection and trigger fetchJobs
   useEffect(() => {
-    const fetchJobs = async () => {
-      setLoading(true);
-      const myHeaders = new Headers();
-      myHeaders.append('Content-Type', 'application/json');
-      const body = JSON.stringify({
-        limit: 10,
-        offset: (page - 1) * 10,
-      });
-      const requestOptions = {
-        method: 'POST',
-        headers: myHeaders,
-        body,
-      };
-      try {
-        const response = await fetch(
-          'https://api.weekday.technology/adhoc/getSampleJdJSON',
-          requestOptions
-        );
-        const data = await response.json();
-        // console.log('data', data);
-        if (data && data.jdList && data.jdList.length > 0) {
-          setJobListings((prevListings) => [...prevListings, ...data.jdList]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchJobs();
         }
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching jobs:', error);
-        setLoading(false);
+      },
+      { threshold: 1 }
+    );
+
+    const observerElement = observerRef.current;
+
+    if (observerElement) {
+      observer.observe(observerElement); // Starting observing the element
+    }
+
+    return () => {
+      if (observerElement) {
+        observer.unobserve(observerElement); // Stopping observing the element
       }
     };
-    fetchJobs();
-  }, [page]);
+  }, [setPage, fetchJobs]);
 
-  const handleScroll = () => {
-    const scrollTop = document.documentElement.scrollTop;
-    const windowHeight = window.innerHeight;
-    const scrollHeight = document.documentElement.scrollHeight;
-    if (scrollTop + windowHeight >= scrollHeight * 0.9) {
-      setPage((prevPage) => prevPage + 1);
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
+  // Function to handle filter change
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters((prevFilters) => ({
-      ...prevFilters,
+    setFilters({
+      ...filters,
       [name]: value,
-    }));
+    });
   };
 
+  // Filtering job listings based on filter criteria
   const filteredJobListings = jobListings.filter((job) => {
     const {
       minExperience,
@@ -89,8 +99,8 @@ const JobListing = () => {
       !location || job.location.toLowerCase().includes(location.toLowerCase());
     const matchesRemote =
       remote === '' || remote === 'all' ||
-      (remote === 'true' && job.isRemote) ||
-      (remote === 'false' && !job.isRemote);
+      (remote === 'true' && job.location.toLowerCase() === 'remote') ||
+      (remote === 'false' && job.location.toLowerCase() !== 'remote');
     const matchesRole =
       !role || job.jobRole.toLowerCase().includes(role.toLowerCase());
     const matchesMinBasePay =
@@ -106,6 +116,14 @@ const JobListing = () => {
     );
   });
 
+  // useEffect to handle edge case when no jobs match the filters and loading is true
+  useEffect(() => {
+    if (filteredJobListings.length === 0 && loading) {
+      setLoading(false);
+    }
+  }, [filteredJobListings, loading, setLoading]);
+
+  // Function to clear filters
   const clearFilters = () => {
     setFilters({
       minExperience: '',
@@ -120,7 +138,7 @@ const JobListing = () => {
 
   return (
     <div>
-      <div className="justify-center m-4 mt-10 w-auto h-full flex p-4 border rounded-lg">
+      <div className="justify-center m-4 mt-10 w-full sm:w-auto h-full flex flex-wrap p-4 border rounded-lg">
         <input
           placeholder="Minimum Experience"
           type="number"
@@ -128,7 +146,7 @@ const JobListing = () => {
           name="minExperience"
           value={filters.minExperience}
           onChange={handleFilterChange}
-          className="m-1 w-auto h-full flex p-2 border rounded-lg"
+          className="m-1 w-full sm:w-auto h-full flex p-2 border rounded-lg"
           min="0"
         />
 
@@ -139,7 +157,7 @@ const JobListing = () => {
           name="companyName"
           value={filters.companyName}
           onChange={handleFilterChange}
-          className="m-1 w-auto h-full flex p-2 border rounded-lg"
+          className="m-1 w-full sm:w-auto h-full flex p-2 border rounded-lg"
         />
 
         <input
@@ -149,7 +167,7 @@ const JobListing = () => {
           name="location"
           value={filters.location}
           onChange={handleFilterChange}
-          className="m-1 w-auto h -full flex p-2 border rounded-lg"
+          className="m-1 w-full sm:w-auto h-full flex p-2 border rounded-lg"
         />
 
         <select
@@ -158,7 +176,7 @@ const JobListing = () => {
           name="remote"
           value={filters.remote}
           onChange={handleFilterChange}
-          className="m-1 w-auto h-full flex p-2 border rounded-lg"
+          className="m-1 w-full sm:w-auto h-full flex p-2 border rounded-lg"
         >
           <option value="all">All</option>
           <option value="true">Remote</option>
@@ -172,7 +190,7 @@ const JobListing = () => {
           name="role"
           value={filters.role}
           onChange={handleFilterChange}
-          className="m-1 w-auto h-full flex p-2 border rounded-lg"
+          className="m-1 w-full sm:w-auto h-full flex p-2 border rounded-lg"
         />
 
         <input
@@ -182,7 +200,7 @@ const JobListing = () => {
           name="minBasePay"
           value={filters.minBasePay}
           onChange={handleFilterChange}
-          className="m-1 w-auto h-full flex p-2 border rounded-lg"
+          className="m-1 w-full sm:w-auto h-full flex p-2 border rounded-lg"
           min="0"
         />
 
@@ -194,14 +212,33 @@ const JobListing = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 ">
-        {filteredJobListings.map((job, index) => (
-          <JobCard key={`${job.jdUid}-${index}`} job={job} />
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+        {filteredJobListings.length === 0 && !loading ? (
+          <p className="text-center text-gray-600">No jobs match the filters.</p>
+        ) : (
+          filteredJobListings.map((job, index) => (
+            <JobCard key={`${job.jdUid}-${index}`} job={job} />
+          ))
+        )}
         {loading && <p>Loading...</p>}
+        <div ref={observerRef} />
       </div>
     </div>
   );
 };
 
-export default JobListing;
+const mapStateToProps = (state) => ({
+  jobListings: state.jobListings,
+  page: state.page,
+  loading: state.loading,
+  filters: state.filters,
+});
+
+const mapDispatchToProps = {
+  setJobListings,
+  setPage,
+  setLoading,
+  setFilters,
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(JobListing);

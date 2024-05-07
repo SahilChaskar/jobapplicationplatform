@@ -7,9 +7,7 @@ const Modal = ({ closeModal, children }) => {
         closeModal();
       }
     };
-
     document.addEventListener('mousedown', handleOutsideClick);
-
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
     };
@@ -19,12 +17,8 @@ const Modal = ({ closeModal, children }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto outline-none focus:outline-none">
       <div className="modal-overlay bg-black opacity-50 fixed inset-0"></div>
       <div className="relative w-auto max-w-3xl mx-auto my-6">
-        {/* Content */}
         <div className="relative flex flex-col bg-white border-0 rounded-lg shadow-lg outline-none focus:outline-none">
-          {/* Body */}
-          <div className="relative p-6 flex-auto">
-            {children}
-          </div>
+          <div className="relative p-6 flex-auto">{children}</div>
         </div>
       </div>
     </div>
